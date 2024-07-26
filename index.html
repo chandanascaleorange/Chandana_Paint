@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Trirong">
+    <link rel="stylesheet" href="paint.css">
+    <title>MS Paint</title>
+</head>
+<body>
+    <div class="container">
+        <div class="menu-bar">
+            <button id="fileBtn">File</button>
+            <button id="homeBtn">Home</button>
+            <button id="edit">Edit</button>
+            <button id="viewBtn">View</button>
+            <button id="setBtn" title="Settings">⚙️</button>
+        </div>
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <button class="showcase-button" title="Selection">⬜</button>
+                <button class="showcase-button" title="Resize">↔️</button>
+                <button class="showcase-button" title="Rotate">🔄</button>
+            </div>
+            <div class="toolbar-section">
+                <button id="brushBtn" title="Brush">🖌️</button>
+                <button id="fillBtn" title="Fill">🪣</button>
+                <button class="showcase-button" title="Text">A</button>
+                <button id="eraseBtn" title="Eraser">🧽</button>
+                <button class="showcase-button" title="Color Picker">🔍</button>
+            </div>
+            <div class="toolbar-section">
+                <button class="showcase-button" title="Line">／</button>
+                <button class="showcase-button" title="Curve">∿</button>
+                <button class="showcase-button" title="Rectangle">▭</button>
+                <button class="showcase-button" title="Oval">⬭</button>
+                <button class="showcase-button" title="Triangle">△</button>
+                <button class="showcase-button" title="Circle">O</button>
+                <button class="showcase-button" title="Square">□</button>
+            </div>
+            <div class="toolbar-section">
+                <select id="brushSize" title="Brush Size">
+                    <option value="5">Small</option>
+                    <option value="15">Medium</option>
+                    <option value="30">Large</option>
+                </select>
+                <select id="shapeSelect" title="Shape">
+                    <option value="brush">Brush</option>
+                    <option value="rectangle">Rectangle</option>
+                    <option value="circle">Circle</option>
+                    <option value="line">Line</option>
+                </select>
+            </div>
+            <div class="toolbar-section">
+                <button id="undoBtn" title="Undo">↩️</button>
+                <button id="redoBtn" title="Redo">↪️</button>
+            </div>
+            <div class="toolbar-section">
+                <button id="clearBtn" title="Clear">🗑️</button>
+                <button id="saveBtn" title="Save">💾</button>
+            </div>
+            <div class="toolbar-section color-palette" id="colorPalette"></div>
+        </div>
+        <canvas id="canvas"></canvas>
+        <div class="status-bar" id="statusBar">
+            Ready
+        </div>
+    </div>
+    <script src="paint.js"></script>
+</body>
+</html>
