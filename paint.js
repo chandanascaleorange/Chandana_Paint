@@ -14,30 +14,24 @@ let isDrawing = false;
 let isErasing = false;
 let lastX = 0;
 let lastY = 0;
-let undoStack = [];
-let redoStack = [];
 let currentColor = '#000000';
 let currentTool = 'brush';
 
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - 100;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    redrawCanvas();
+    loadFromLocalStorage();
 }
 
 function startDrawing(e) {
     isDrawing = true;
-    [lastX, lastY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
-    saveState();
+    [lastX, lastY] = getCoordinates(e);
 }
 
 function draw(e) {
     if (!isDrawing) return;
 
-    const currentX = e.clientX - canvas.offsetLeft;
-    const currentY = e.clientY - canvas.offsetTop;
+    const [currentX, currentY] = getCoordinates(e);
 
     ctx.strokeStyle = isErasing ? '#ffffff' : currentColor;
     ctx.lineWidth = brushSize.value;
@@ -69,83 +63,50 @@ function draw(e) {
 
     [lastX, lastY] = [currentX, currentY];
     updateStatus(currentX, currentY);
+    saveToLocalStorage();
 }
 
 function stopDrawing() {
     if (isDrawing) {
         isDrawing = false;
-        saveState();
+        saveToLocalStorage();
+    }
+}
+
+function getCoordinates(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    if (e.touches && e.touches[0]) {
+        return [
+            (e.touches[0].clientX - rect.left) * scaleX,
+            (e.touches[0].clientY - rect.top) * scaleY
+        ];
+    } else {
+        return [
+            (e.clientX - rect.left) * scaleX,
+            (e.clientY - rect.top) * scaleY
+        ];
     }
 }
 
 function clearCanvas() {
-    saveState();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ffffff';  // Change to white
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     saveToLocalStorage();
 }
-// this function makes sure that the background of the saved image is white and the colors used to draw are preserved by creating a temporary canvas
+
 function saveCanvas() { 
-    // Create a temporary canvas
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    
-    // Fill the temporary canvas with white
-    tempCtx.fillStyle = '#ffffff';
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    
-    // Draw the main canvas content onto the temporary canvas
-    tempCtx.drawImage(canvas, 0, 0);
-    
-    // Save the temporary canvas
     const link = document.createElement('a');
     link.download = 'paint.png';
-    link.href = tempCanvas.toDataURL();
+    link.href = canvas.toDataURL();
     link.click();   
 }
 
-function saveState() {
-    undoStack.push(canvas.toDataURL());
-    redoStack = [];
-    saveToLocalStorage();
-}
-
-function undo() {
-    if (undoStack.length > 1) {
-        redoStack.push(undoStack.pop());
-        redrawState(undoStack[undoStack.length - 1]);
-        saveToLocalStorage();
-    }
-}
-
-function redo() {
-    if (redoStack.length > 0) {
-        undoStack.push(redoStack.pop());
-        redrawState(undoStack[undoStack.length - 1]);
-        saveToLocalStorage();
-    }
-}
-
-function redrawState(state) {
-    const img = new Image();
-    img.onload = function() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-    };
-    img.src = state;
-}
-
-function redrawCanvas() {
-    if (undoStack.length > 0) {
-        redrawState(undoStack[undoStack.length - 1]);
-    }
-}
-
 function updateStatus(x, y) {
-    statusBar.textContent = `X: ${x}, Y: ${y} | Current tool: ${currentTool}`;
+    statusBar.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)} | Current tool: ${currentTool}`;
 }
 
 function createColorPalette() {
@@ -165,28 +126,41 @@ function createColorPalette() {
 }
 
 function saveToLocalStorage() {
-    localStorage.setItem('canvasState', JSON.stringify({
-        imageData: canvas.toDataURL(),
-        undoStack: undoStack,
-        redoStack: redoStack
-    }));
+    localStorage.setItem('canvasState', canvas.toDataURL());
 }
 
 function loadFromLocalStorage() {
     const savedState = localStorage.getItem('canvasState');
     if (savedState) {
-        const state = JSON.parse(savedState);
-        undoStack = state.undoStack;
-        redoStack = state.redoStack;
-        redrawState(state.imageData);
+        const img = new Image();
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0);
+        };
+        img.src = savedState;
     }
 }
 
-window.addEventListener('resize', resizeCanvas);
+// Mouse event listeners
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseout', stopDrawing);
+
+// Touch event listeners
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startDrawing(e);
+});
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    draw(e);
+});
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopDrawing();
+});
+
+window.addEventListener('resize', resizeCanvas);
 
 eraseBtn.addEventListener('click', () => {
     isErasing = !isErasing;
@@ -196,15 +170,19 @@ eraseBtn.addEventListener('click', () => {
 fillBtn.addEventListener('click', () => {
     alert('Fill tool not implemented');
 });
-clearBtn.addEventListener('click', clearCanvas);
+clearBtn.addEventListener('click', () => {
+    clearCanvas();
+    updateStatus(0, 0);
+});
 saveBtn.addEventListener('click', saveCanvas);
-undoBtn.addEventListener('click', undo);
-redoBtn.addEventListener('click', redo);
+undoBtn.addEventListener('click', () => {
+    alert('Undo functionality not implemented');
+});
+redoBtn.addEventListener('click', () => {
+    alert('Redo functionality not implemented');
+});
 
 // Initial setup
 resizeCanvas();
 createColorPalette();
-loadFromLocalStorage(); // Load saved state on page load
-if (undoStack.length === 0) {
-    saveState(); // Save initial blank state if no saved state exists
-}
+loadFromLocalStorage();
