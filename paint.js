@@ -17,10 +17,16 @@ let lastY = 0;
 let currentColor = '#000000';
 let currentTool = 'brush';
 
+// New variables for undo/redo functionality
+let history = [];
+let currentStep = -1;
+const maxHistory = 50;
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - 100;
     loadFromLocalStorage();
+    initializeHistory();
 }
 
 function startDrawing(e) {
@@ -63,13 +69,13 @@ function draw(e) {
 
     [lastX, lastY] = [currentX, currentY];
     updateStatus(currentX, currentY);
-    saveToLocalStorage();
+    saveToHistory();
 }
 
 function stopDrawing() {
     if (isDrawing) {
         isDrawing = false;
-        saveToLocalStorage();
+        saveToHistory();
     }
 }
 
@@ -95,7 +101,7 @@ function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    saveToLocalStorage();
+    saveToHistory();
 }
 
 function saveCanvas() { 
@@ -140,6 +146,54 @@ function loadFromLocalStorage() {
     }
 }
 
+// New functions for undo/redo functionality
+function saveToHistory() {
+    currentStep++;
+    if (currentStep < history.length) {
+        history = history.slice(0, currentStep);
+    }
+    history.push(canvas.toDataURL());
+    if (history.length > maxHistory) {
+        history.shift();
+        currentStep--;
+    }
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    undoBtn.disabled = currentStep <= 0;
+    redoBtn.disabled = currentStep >= history.length - 1;
+}
+
+function undo() {
+    if (currentStep > 0) {
+        currentStep--;
+        loadFromHistory();
+    }
+}
+
+function redo() {
+    if (currentStep < history.length - 1) {
+        currentStep++;
+        loadFromHistory();
+    }
+}
+
+function loadFromHistory() {
+    const img = new Image();
+    img.onload = function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+    };
+    img.src = history[currentStep];
+    updateUndoRedoButtons();
+}
+
+function initializeHistory() {
+    clearCanvas();
+    saveToHistory();
+}
+
 // Mouse event listeners
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
@@ -175,14 +229,11 @@ clearBtn.addEventListener('click', () => {
     updateStatus(0, 0);
 });
 saveBtn.addEventListener('click', saveCanvas);
-undoBtn.addEventListener('click', () => {
-    alert('Undo functionality not implemented');
-});
-redoBtn.addEventListener('click', () => {
-    alert('Redo functionality not implemented');
-});
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
 
 // Initial setup
 resizeCanvas();
 createColorPalette();
 loadFromLocalStorage();
+initializeHistory();
